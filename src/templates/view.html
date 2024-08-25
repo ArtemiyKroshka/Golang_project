@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Guestbook</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0"
+    />
+  </head>
+  <body>
+    <h1>Guestbook</h1>
+    <div>
+      {{ .SignatureCount}} total signatures -
+      <a href="/new">Add Your Signature</a>
+    </div>
+    <div>
+      {{ range $index, $signature := .Signatures }}
+      <form
+        action="/delete"
+        method="POST"
+        style="display: flex; gap: 0 8px; align-items: center; margin: 0px"
+      >
+        <p>{{ $signature }}</p>
+        <input type="hidden" name="index" value="{{ $index }}" />
+        <button type="submit">delete</button>
+      </form>
+      {{ end }}
+    </div>
+  </body>
+</html>
