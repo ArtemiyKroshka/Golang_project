@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 )
+
+var mu sync.Mutex
 
 type Guestbook struct {
 	SignatureCount int
@@ -67,6 +70,10 @@ func newHandler(writer http.ResponseWriter, _ *http.Request) {
 func createHandler(writer http.ResponseWriter, request *http.Request) {
 	signature := request.FormValue("signature")
 	options := os.O_WRONLY | os.O_APPEND | os.O_CREATE
+
+	mu.Lock()
+	defer mu.Unlock()
+
 	file, err := os.OpenFile("src/signatures.txt", options, os.FileMode(0600))
 	serverError(err, writer)
 	defer file.Close()
@@ -79,6 +86,10 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	index, err := strconv.Atoi(request.FormValue("index"))
 	serverError(err, writer)
 	signatures := getStrings("src/signatures.txt")
+
+	mu.Lock()
+	defer mu.Unlock()
+
 	newSignatures := make([]string, 0, len(signatures)-1)
 	options := os.O_WRONLY | os.O_TRUNC | os.O_CREATE
 	for i, v := range signatures {
@@ -97,7 +108,22 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	http.Redirect(writer, request, "/", http.StatusFound)
 }
 
+func handlerError() {
+	p := recover()
+	if p == nil {
+		return
+	}
+	err, ok := p.(error)
+	if ok {
+		fmt.Println("Recovered from panic:", err)
+	} else {
+		fmt.Println("Recovered from panic:", p)
+	}
+}
+
 func main() {
+
+	defer handlerError()
 
 	var port = os.Getenv("PORT")
 
@@ -111,6 +137,5 @@ func main() {
 	http.HandleFunc("/new", newHandler)
 	http.HandleFunc("/create", createHandler)
 	http.HandleFunc("/delete", deleteHandler)
-	err := http.ListenAndServe(":"+port, nil)
-	log.Fatal(err)
+	http.ListenAndServe(":"+port, nil)
 }

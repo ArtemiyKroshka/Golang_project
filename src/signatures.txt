@@ -1,3 +1,2 @@
-return all
-test 
 hello world
+asdasdasd
