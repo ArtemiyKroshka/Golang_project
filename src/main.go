@@ -22,10 +22,6 @@ type Guestbook struct {
 	Signatures     []string
 }
 
-type Server struct {
-	server *http.Server
-}
-
 func check(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -60,6 +56,7 @@ func getStrings(fileName string) []string {
 }
 
 func viewHanlder(writer http.ResponseWriter, _ *http.Request) {
+	go handlerError(writer)
 	signatures := getStrings("src/signatures.txt")
 	html, err := template.ParseFiles("src/templates/view.html")
 	serverError(err, writer)
@@ -68,6 +65,7 @@ func viewHanlder(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func newHandler(writer http.ResponseWriter, _ *http.Request) {
+	go handlerError(writer)
 	html, err := template.ParseFiles("src/templates/new.html")
 	serverError(err, writer)
 	err = html.Execute(writer, nil)
@@ -75,6 +73,7 @@ func newHandler(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func createHandler(writer http.ResponseWriter, request *http.Request) {
+	go handlerError(writer)
 	signature := request.FormValue("signature")
 	options := os.O_WRONLY | os.O_APPEND | os.O_CREATE
 
@@ -90,6 +89,7 @@ func createHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
+	go handlerError(writer)
 	index, err := strconv.Atoi(request.FormValue("index"))
 	serverError(err, writer)
 	signatures := getStrings("src/signatures.txt")
@@ -115,22 +115,18 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	http.Redirect(writer, request, "/", http.StatusFound)
 }
 
-func handlerError() {
-	p := recover()
-	if p == nil {
-		return
-	}
-	err, ok := p.(error)
-	if ok {
-		fmt.Println("Recovered from panic:", err)
-	} else {
-		fmt.Println("Recovered from panic:", p)
+func handlerError(writer http.ResponseWriter) {
+	if r := recover(); r != nil {
+		serverError(fmt.Errorf("panic recovered: %v", r), writer)
 	}
 }
 
 func main() {
-
-	defer handlerError()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered from panic: %v", r)
+		}
+	}()
 
 	var port = os.Getenv("PORT")
 
