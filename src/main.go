@@ -156,7 +156,7 @@ func main() {
 	signal.Notify(sigterm, os.Interrupt)
 
 	<-sigterm
-	// Create a context with a timeout for graceful shutdown
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
