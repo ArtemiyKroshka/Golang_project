@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var mu sync.Mutex
+var mu sync.RWMutex
 
 type Guestbook struct {
 	SignatureCount int
@@ -77,8 +77,8 @@ func createHandler(writer http.ResponseWriter, request *http.Request) {
 	signature := request.FormValue("signature")
 	options := os.O_WRONLY | os.O_APPEND | os.O_CREATE
 
-	mu.Lock()
-	defer mu.Unlock()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	file, err := os.OpenFile("src/signatures.txt", options, os.FileMode(0600))
 	serverError(err, writer)
@@ -94,8 +94,8 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	serverError(err, writer)
 	signatures := getStrings("src/signatures.txt")
 
-	mu.Lock()
-	defer mu.Unlock()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	newSignatures := make([]string, 0, len(signatures)-1)
 	options := os.O_WRONLY | os.O_TRUNC | os.O_CREATE
