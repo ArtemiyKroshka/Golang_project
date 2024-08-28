@@ -2,14 +2,17 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"sync"
+	"time"
 )
 
 var mu sync.Mutex
@@ -17,6 +20,10 @@ var mu sync.Mutex
 type Guestbook struct {
 	SignatureCount int
 	Signatures     []string
+}
+
+type Server struct {
+	server *http.Server
 }
 
 func check(err error) {
@@ -133,9 +140,31 @@ func main() {
 		port = *portFlag
 	}
 
+	server := &http.Server{
+		Addr: ":" + port,
+	}
+
 	http.HandleFunc("/", viewHanlder)
 	http.HandleFunc("/new", newHandler)
 	http.HandleFunc("/create", createHandler)
 	http.HandleFunc("/delete", deleteHandler)
-	http.ListenAndServe(":"+port, nil)
+
+	go func() {
+		log.Printf("Server started on port %s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Start server error: %v", err)
+		}
+	}()
+
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, os.Interrupt)
+
+	<-sigterm
+	// Create a context with a timeout for graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Shutdown Failed:%+v", err)
+	}
+	log.Println("Server exited properly")
 }
