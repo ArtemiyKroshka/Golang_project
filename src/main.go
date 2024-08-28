@@ -22,12 +22,6 @@ type Guestbook struct {
 	Signatures     []string
 }
 
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func serverError(err error, writer http.ResponseWriter) {
 	if err != nil {
 		log.Printf("Error text: %v", err)
@@ -41,7 +35,10 @@ func getStrings(fileName string) []string {
 	if os.IsNotExist(err) {
 		return nil
 	}
-	check(err)
+	if err != nil {
+		log.Println("Error opening file:", err)
+		return nil
+	}
 
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
@@ -49,53 +46,72 @@ func getStrings(fileName string) []string {
 		lines = append(lines, scanner.Text())
 	}
 
-	check(scanner.Err())
+	if err := scanner.Err(); err != nil {
+		log.Println("Error reading file:", err)
+	}
 
 	return lines
 
 }
 
 func viewHanlder(writer http.ResponseWriter, _ *http.Request) {
-	go handlerError(writer)
 	signatures := getStrings("src/signatures.txt")
 	html, err := template.ParseFiles("src/templates/view.html")
-	serverError(err, writer)
-	err = html.Execute(writer, Guestbook{Signatures: signatures, SignatureCount: len(signatures)})
-	serverError(err, writer)
+	if err != nil {
+		serverError(err, writer)
+		return
+	}
+	if err := html.Execute(writer, Guestbook{Signatures: signatures, SignatureCount: len(signatures)}); err != nil {
+		serverError(err, writer)
+	}
 }
 
 func newHandler(writer http.ResponseWriter, _ *http.Request) {
-	go handlerError(writer)
 	html, err := template.ParseFiles("src/templates/new.html")
-	serverError(err, writer)
-	err = html.Execute(writer, nil)
-	serverError(err, writer)
+	if err != nil {
+		serverError(err, writer)
+		return
+	}
+	if err := html.Execute(writer, nil); err != nil {
+		serverError(err, writer)
+	}
 }
 
 func createHandler(writer http.ResponseWriter, request *http.Request) {
-	go handlerError(writer)
 	signature := request.FormValue("signature")
 	options := os.O_WRONLY | os.O_APPEND | os.O_CREATE
 
-	mu.RLock()
-	defer mu.RUnlock()
+	mu.Lock()
+	defer mu.Unlock()
 
 	file, err := os.OpenFile("src/signatures.txt", options, os.FileMode(0600))
-	serverError(err, writer)
+	if err != nil {
+		serverError(err, writer)
+		return
+	}
 	defer file.Close()
-	_, err = fmt.Fprintln(file, signature)
-	serverError(err, writer)
+	if _, err := fmt.Fprintln(file, signature); err != nil {
+		serverError(err, writer)
+		return
+	}
 	http.Redirect(writer, request, "/", http.StatusFound)
 }
 
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
-	go handlerError(writer)
 	index, err := strconv.Atoi(request.FormValue("index"))
-	serverError(err, writer)
+	if err != nil {
+		serverError(err, writer)
+		return
+	}
 	signatures := getStrings("src/signatures.txt")
 
-	mu.RLock()
-	defer mu.RUnlock()
+	mu.Lock()
+	defer mu.Unlock()
+
+	if index < 0 || index >= len(signatures) {
+		http.Error(writer, "Invalid index", http.StatusBadRequest)
+		return
+	}
 
 	newSignatures := make([]string, 0, len(signatures)-1)
 	options := os.O_WRONLY | os.O_TRUNC | os.O_CREATE
@@ -106,19 +122,18 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 		newSignatures = append(newSignatures, v)
 	}
 	file, err := os.OpenFile("src/signatures.txt", options, os.FileMode(0600))
-	serverError(err, writer)
+	if err != nil {
+		serverError(err, writer)
+		return
+	}
 	defer file.Close()
 	for _, line := range newSignatures {
-		_, err := file.WriteString(line + "\n")
-		check(err)
+		if _, err := file.WriteString(line + "\n"); err != nil {
+			serverError(err, writer)
+			return
+		}
 	}
 	http.Redirect(writer, request, "/", http.StatusFound)
-}
-
-func handlerError(writer http.ResponseWriter) {
-	if r := recover(); r != nil {
-		serverError(fmt.Errorf("panic recovered: %v", r), writer)
-	}
 }
 
 func main() {
