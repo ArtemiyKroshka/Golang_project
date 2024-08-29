@@ -22,7 +22,7 @@ type Guestbook struct {
 	Signatures     []string
 }
 
-func serverError(err error, writer http.ResponseWriter) {
+func serverError(writer http.ResponseWriter, err error) {
 	if err != nil {
 		log.Printf("Error text: %v", err)
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
@@ -30,6 +30,10 @@ func serverError(err error, writer http.ResponseWriter) {
 }
 
 func getStrings(fileName string) []string {
+
+	mu.Lock()
+	defer mu.Unlock()
+
 	var lines []string
 	file, err := os.Open(fileName)
 	if os.IsNotExist(err) {
@@ -58,22 +62,22 @@ func viewHanlder(writer http.ResponseWriter, _ *http.Request) {
 	signatures := getStrings("src/signatures.txt")
 	html, err := template.ParseFiles("src/templates/view.html")
 	if err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 		return
 	}
 	if err := html.Execute(writer, Guestbook{Signatures: signatures, SignatureCount: len(signatures)}); err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 	}
 }
 
 func newHandler(writer http.ResponseWriter, _ *http.Request) {
 	html, err := template.ParseFiles("src/templates/new.html")
 	if err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 		return
 	}
 	if err := html.Execute(writer, nil); err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 	}
 }
 
@@ -86,12 +90,12 @@ func createHandler(writer http.ResponseWriter, request *http.Request) {
 
 	file, err := os.OpenFile("src/signatures.txt", options, os.FileMode(0600))
 	if err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 		return
 	}
 	defer file.Close()
 	if _, err := fmt.Fprintln(file, signature); err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 		return
 	}
 	http.Redirect(writer, request, "/", http.StatusFound)
@@ -100,7 +104,7 @@ func createHandler(writer http.ResponseWriter, request *http.Request) {
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	index, err := strconv.Atoi(request.FormValue("index"))
 	if err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 		return
 	}
 	signatures := getStrings("src/signatures.txt")
@@ -123,13 +127,13 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	file, err := os.OpenFile("src/signatures.txt", options, os.FileMode(0600))
 	if err != nil {
-		serverError(err, writer)
+		serverError(writer, err)
 		return
 	}
 	defer file.Close()
 	for _, line := range newSignatures {
 		if _, err := file.WriteString(line + "\n"); err != nil {
-			serverError(err, writer)
+			serverError(writer, err)
 			return
 		}
 	}
@@ -143,16 +147,11 @@ func main() {
 		}
 	}()
 
-	var port = os.Getenv("PORT")
-
-	if port == "" {
-		portFlag := flag.String("port", "8080", "Server port")
-		flag.Parse()
-		port = *portFlag
-	}
+	portFlag := flag.String("port", "8080", "Server port")
+	flag.Parse()
 
 	server := &http.Server{
-		Addr: ":" + port,
+		Addr: ":" + *portFlag,
 	}
 
 	http.HandleFunc("/", viewHanlder)
@@ -161,7 +160,7 @@ func main() {
 	http.HandleFunc("/delete", deleteHandler)
 
 	go func() {
-		log.Printf("Server started on port %s", port)
+		log.Printf("Server started on port %s", *portFlag)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Start server error: %v", err)
 		}
