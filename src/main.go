@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -65,8 +66,13 @@ func viewHanlder(writer http.ResponseWriter, _ *http.Request) {
 		serverError(writer, err)
 		return
 	}
-	if err := html.Execute(writer, Guestbook{Signatures: signatures, SignatureCount: len(signatures)}); err != nil {
+	var buf bytes.Buffer
+	if err := html.Execute(&buf, Guestbook{Signatures: signatures, SignatureCount: len(signatures)}); err != nil {
 		serverError(writer, err)
+	}
+
+	if _, err := buf.WriteTo(writer); err != nil {
+		log.Printf("Cannot write response for view handler: %v", err)
 	}
 }
 
@@ -76,8 +82,12 @@ func newHandler(writer http.ResponseWriter, _ *http.Request) {
 		serverError(writer, err)
 		return
 	}
-	if err := html.Execute(writer, nil); err != nil {
+	var buf bytes.Buffer
+	if err := html.Execute(&buf, nil); err != nil {
 		serverError(writer, err)
+	}
+	if _, err := buf.WriteTo(writer); err != nil {
+		log.Printf("Cannot write response for new handler: %v", err)
 	}
 }
 
