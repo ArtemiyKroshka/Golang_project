@@ -167,7 +167,7 @@ func main() {
 		}
 	}()
 
-	sigterm := make(chan os.Signal, 1)
+	sigterm := make(chan os.Signal, 1) // package "closer" as an alternative
 	signal.Notify(sigterm, os.Interrupt)
 
 	<-sigterm
