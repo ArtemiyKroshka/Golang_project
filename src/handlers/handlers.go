@@ -3,7 +3,7 @@ package handlers
 import (
 	"bytes"
 	"fmt"
-	getstring "go_project/src/utils"
+	"go_project/src/utils/readFile"
 	"html/template"
 	"log"
 	"net/http"
@@ -27,7 +27,7 @@ func serverError(writer http.ResponseWriter, err error) {
 }
 
 func ViewHanlder(writer http.ResponseWriter, _ *http.Request) {
-	signatures := getstring.GetStrings("src/signatures.txt", &mu)
+	signatures := readFile.GetStrings("src/signatures.txt", &mu)
 	html, err := template.ParseFiles("src/templates/view.html")
 	if err != nil {
 		serverError(writer, err)
@@ -84,7 +84,7 @@ func DeleteHandler(writer http.ResponseWriter, request *http.Request) {
 		serverError(writer, err)
 		return
 	}
-	signatures := getstring.GetStrings("src/signatures.txt", &mu)
+	signatures := readFile.GetStrings("src/signatures.txt", &mu)
 
 	mu.Lock()
 	defer mu.Unlock()

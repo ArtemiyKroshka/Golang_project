@@ -1,4 +1,4 @@
-package getstring
+package readFile
 
 import (
 	"bufio"
@@ -12,7 +12,6 @@ func GetStrings(fileName string, mu *sync.RWMutex) []string {
 	mu.Lock()
 	defer mu.Unlock()
 
-	var lines []string
 	file, err := os.Open(fileName)
 	if os.IsNotExist(err) {
 		return nil
@@ -23,6 +22,8 @@ func GetStrings(fileName string, mu *sync.RWMutex) []string {
 	}
 
 	defer file.Close()
+
+	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
