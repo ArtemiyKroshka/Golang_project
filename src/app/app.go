@@ -48,7 +48,7 @@ func endServer(server *http.Server, timeout time.Duration) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	defer database.DB.Close()
+	defer database.ExitDatabase()
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
 	}

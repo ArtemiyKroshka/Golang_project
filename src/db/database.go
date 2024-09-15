@@ -40,6 +40,12 @@ func ConnectDatabase() {
 	fmt.Println("Successfully connected to the database!")
 }
 
+func ExitDatabase() {
+	ClearTable()
+
+	defer DB.Close()
+}
+
 func ClearTable() {
 	_, err := DB.Query("TRUNCATE TABLE golang_project")
 	if err != nil {
