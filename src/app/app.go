@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"flag"
+	database "go_project/src/db"
 	"go_project/src/handlers"
 	"log"
 	"net/http"
@@ -47,6 +48,7 @@ func endServer(server *http.Server, timeout time.Duration) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+	defer database.DB.Close()
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
 	}
@@ -54,16 +56,18 @@ func endServer(server *http.Server, timeout time.Duration) {
 }
 
 func Run() {
-	// Чтение флага для порта
+	// Get port value from flag
 	portFlag := flag.String("port", "8080", "Server port")
 	flag.Parse()
 
-	// Инициализация сервера
+	// Initialize server
 	serv := newServer(portFlag)
 
-	// Запуск сервера
+	// Start server
 	startServer(serv)
 
-	// Завершение работы сервера с таймаутом
+	database.ConnectDatabase()
+
+	// Gracefull shutdown
 	endServer(serv, 5*time.Second)
 }
