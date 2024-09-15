@@ -47,7 +47,7 @@ func ExitDatabase() {
 }
 
 func ClearTable() {
-	_, err := DB.Query("TRUNCATE TABLE golang_project")
+	_, err := DB.Exec("TRUNCATE TABLE golang_project")
 	if err != nil {
 		log.Fatal("Failed to truncate data:", err)
 	}
