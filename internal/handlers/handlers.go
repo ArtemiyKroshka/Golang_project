@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"bytes"
-	database "go_project/src/db"
+	database "go_project/internal/db"
 	"html/template"
 	"log"
 	"net/http"
@@ -25,7 +25,7 @@ func ViewHanlder(writer http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	html, err := template.ParseFiles("src/templates/view.html")
+	html, err := template.ParseFiles("internal/templates/view.html")
 	if err != nil {
 		serverError(writer, err)
 		return
@@ -41,7 +41,7 @@ func ViewHanlder(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func NewHandler(writer http.ResponseWriter, _ *http.Request) {
-	html, err := template.ParseFiles("src/templates/new.html")
+	html, err := template.ParseFiles("internal/templates/new.html")
 	if err != nil {
 		serverError(writer, err)
 		return

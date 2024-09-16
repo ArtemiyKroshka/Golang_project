@@ -1,10 +1,10 @@
-package app
+package server
 
 import (
 	"context"
 	"flag"
-	database "go_project/src/db"
-	"go_project/src/handlers"
+	database "go_project/internal/db"
+	"go_project/internal/handlers"
 	"log"
 	"net/http"
 	"os"

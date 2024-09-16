@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go_project/src/app"
+	"go_project/internal/server"
 	"log"
 )
 
@@ -12,6 +12,6 @@ func main() {
 		}
 	}()
 
-	app.Run()
+	server.Run()
 
 }
