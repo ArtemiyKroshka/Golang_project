@@ -10,7 +10,7 @@ import (
 
 type Guestbook struct {
 	SignatureCount int
-	Signatures     []string
+	Signatures     []database.Line
 }
 
 func serverError(writer http.ResponseWriter, err error) {
@@ -64,7 +64,7 @@ func CreateHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func DeleteHandler(writer http.ResponseWriter, request *http.Request) {
-	signature := request.FormValue("signature")
+	signature := request.FormValue("id")
 
 	database.DeleteData(signature)
 

@@ -16,14 +16,14 @@
       <a href="/new">Add Your Signature</a>
     </div>
     <div>
-      {{ range $index, $signature := .Signatures }}
+      {{ range $signature := .Signatures }}
       <form
         action="/delete"
         method="POST"
         style="display: flex; gap: 0 8px; align-items: center; margin: 0px"
       >
-        <p>{{ $signature }}</p>
-        <input type="hidden" name="signature" value="{{ $signature }}" />
+        <p>{{ $signature.Title }}</p>
+        <input type="hidden" name="id" value="{{ $signature.ID }}" />
         <button type="submit">delete</button>
       </form>
       {{ end }}
