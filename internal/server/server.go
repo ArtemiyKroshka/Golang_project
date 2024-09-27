@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -42,10 +43,11 @@ func startServer(server *http.Server) {
 
 func endServer(server *http.Server, timeout time.Duration) {
 	sigterm := make(chan os.Signal, 1) // package "closer" as an alternative
-	signal.Notify(sigterm, os.Interrupt)
+	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	<-sigterm
 
+	log.Println("Shutdown signal received, exiting...")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	defer database.ExitDatabase()
@@ -61,13 +63,13 @@ func Run() {
 	flag.Parse()
 
 	// Initialize server
-	serv := newServer(portFlag)
+	server := newServer(portFlag)
 
 	// Start server
-	startServer(serv)
+	startServer(server)
 
 	database.ConnectDatabase()
 
 	// Gracefull shutdown
-	endServer(serv, 5*time.Second)
+	endServer(server, 5*time.Second)
 }

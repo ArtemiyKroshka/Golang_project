@@ -22,6 +22,7 @@ services:
       - db
     ports:
       - "8080:8080"
+    stop_grace_period: 5s
     env_file:
       - .env # Loads environment variables from .env file
     networks:

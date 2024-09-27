@@ -14,7 +14,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go_project/go_project main.go
 
 # Step 2: Use a minimal image to run the Go application
-FROM scratch
+FROM alpine:latest
 
 ENV DB_PORT=5432
 ENV DB_USER=postgres
