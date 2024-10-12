@@ -44,7 +44,7 @@ func startServer(server *http.Server) {
 
 func endServer(server *http.Server, database *database.Database, timeout time.Duration) {
 	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM)
 
 	<-sigterm
 
