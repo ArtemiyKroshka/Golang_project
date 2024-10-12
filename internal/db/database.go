@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -15,23 +14,14 @@ type Line struct {
 	Title string
 }
 
-var DB *sql.DB
-
-func createTable() {
-	_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS golang_project_table (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL
-	);`)
-	if err != nil {
-		log.Fatal("Failed to create table:", err)
-	}
+type Database struct {
+	DB *sql.DB
 }
 
-func ConnectDatabase() {
+func NewDatabase() (*Database, error) {
 	if os.Getenv("DB_HOST") == "" {
-		// createTable()
 		if err := godotenv.Load(); err != nil {
-			log.Fatal("Error loading .env file")
+			return nil, fmt.Errorf("error loading .env file: %v", err)
 		}
 	}
 
@@ -42,38 +32,40 @@ func ConnectDatabase() {
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"))
 
-	var err error
-	DB, err = sql.Open("postgres", psqlInfo)
+	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		log.Fatal("Failed to open a DB connection:", err)
+		return nil, fmt.Errorf("failed to open a DB connection: %v", err)
 	}
 
-	err = DB.Ping()
-	if err != nil {
-		log.Fatal("Failed to ping the DB:", err)
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping the DB: %v", err)
 	}
 
 	fmt.Println("Successfully connected to the database!")
 
-	createTable()
-}
-
-func ExitDatabase() {
-	ClearTable()
-
-	defer DB.Close()
-}
-
-func ClearTable() {
-	_, err := DB.Exec("TRUNCATE TABLE golang_project_table")
-	if err != nil {
-		log.Fatal("Failed to truncate data:", err)
+	database := &Database{DB: db}
+	if err := database.createTable(); err != nil {
+		return nil, fmt.Errorf("failed to create table: %v", err)
 	}
+
+	return database, nil
 }
 
-func GetData() ([]Line, error) {
-	// Adjust query to select both id and title columns
-	rows, err := DB.Query("SELECT id, title FROM golang_project_table")
+func (d *Database) createTable() error {
+	_, err := d.DB.Exec(`CREATE TABLE IF NOT EXISTS golang_project_table (
+		id SERIAL PRIMARY KEY,
+		title TEXT NOT NULL
+	);`)
+	return err
+}
+
+func (d *Database) ClearTable() error {
+	_, err := d.DB.Exec("TRUNCATE TABLE golang_project_table")
+	return err
+}
+
+func (d *Database) GetData() ([]Line, error) {
+	rows, err := d.DB.Query("SELECT id, title FROM golang_project_table")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
@@ -82,14 +74,12 @@ func GetData() ([]Line, error) {
 	var projects []Line
 	for rows.Next() {
 		var project Line
-		// Scan both the id and title into the Project struct
 		if err := rows.Scan(&project.ID, &project.Title); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
 		projects = append(projects, project)
 	}
 
-	// Check for any errors encountered during iteration
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error occurred during row iteration: %v", err)
 	}
@@ -97,16 +87,16 @@ func GetData() ([]Line, error) {
 	return projects, nil
 }
 
-func SetData(line string) {
-	_, err := DB.Exec("INSERT INTO golang_project_table (title) VALUES ($1)", line)
-	if err != nil {
-		log.Fatal("Failed to insert data:", err)
-	}
+func (d *Database) SetData(line string) error {
+	_, err := d.DB.Exec("INSERT INTO golang_project_table (title) VALUES ($1)", line)
+	return err
 }
 
-func DeleteData(id string) {
-	_, err := DB.Exec("DELETE FROM golang_project_table WHERE id = $1", id)
-	if err != nil {
-		log.Fatal("Failed to delete data:", err)
-	}
+func (d *Database) DeleteData(id string) error {
+	_, err := d.DB.Exec("DELETE FROM golang_project_table WHERE id = $1", id)
+	return err
+}
+
+func (d *Database) Close() error {
+	return d.DB.Close()
 }
