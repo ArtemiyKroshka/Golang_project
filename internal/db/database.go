@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -61,11 +62,12 @@ func (d *Database) createTable() error {
 
 func (d *Database) ClearTable() error {
 	_, err := d.DB.Exec("TRUNCATE TABLE golang_project_table")
+	fmt.Println("Successfully clear the table!")
 	return err
 }
 
-func (d *Database) GetData() ([]Line, error) {
-	rows, err := d.DB.Query("SELECT id, title FROM golang_project_table")
+func (d *Database) GetData(ctx context.Context) ([]Line, error) {
+	rows, err := d.DB.QueryContext(ctx, "SELECT id, title FROM golang_project_table")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
@@ -87,16 +89,17 @@ func (d *Database) GetData() ([]Line, error) {
 	return projects, nil
 }
 
-func (d *Database) SetData(line string) error {
-	_, err := d.DB.Exec("INSERT INTO golang_project_table (title) VALUES ($1)", line)
+func (d *Database) SetData(ctx context.Context, line string) error {
+	_, err := d.DB.ExecContext(ctx, "INSERT INTO golang_project_table (title) VALUES ($1)", line)
 	return err
 }
 
-func (d *Database) DeleteData(id string) error {
-	_, err := d.DB.Exec("DELETE FROM golang_project_table WHERE id = $1", id)
+func (d *Database) DeleteData(ctx context.Context, id string) error {
+	_, err := d.DB.ExecContext(ctx, "DELETE FROM golang_project_table WHERE id = $1", id)
 	return err
 }
 
 func (d *Database) Close() error {
+	d.ClearTable()
 	return d.DB.Close()
 }

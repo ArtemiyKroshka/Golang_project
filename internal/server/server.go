@@ -11,18 +11,27 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
-func setupServerRoutes(database *database.Database) *http.ServeMux {
-	mux := http.NewServeMux()
+func setupServerRoutes(database *database.Database) chi.Router {
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
 
-	// Pass the database instance to each handler
-	mux.HandleFunc("/", handlers.ViewHandler(database))
-	mux.HandleFunc("/new", handlers.NewHandler(database))
-	mux.HandleFunc("/create", handlers.CreateHandler(database))
-	mux.HandleFunc("/delete", handlers.DeleteHandler(database))
+	h := handlers.NewHandlers(database)
 
-	return mux
+	// Register routes using the chi router
+	router.Get("/", h.ViewHandler)
+	router.Get("/new", h.NewHandler)
+	router.Post("/create", h.CreateHandler)
+	router.Post("/delete", h.DeleteHandler)
+
+	fileServer := http.StripPrefix("/assets/", http.FileServer(http.Dir("./internal/assets")))
+	router.Handle("/assets/*", fileServer)
+
+	return router
 }
 
 func newServer(port *string, database *database.Database) *http.Server {
